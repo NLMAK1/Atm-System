@@ -1,0 +1,6 @@
+{
+  "name": "ATM System",
+  "description": "Console-based Object-Oriented ATM Banking System with Room relational persistence, note denomination dispensing, and OOP architecture.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
