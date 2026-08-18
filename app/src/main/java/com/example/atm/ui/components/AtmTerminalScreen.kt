@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Lock
@@ -224,6 +225,7 @@ fun AtmTerminalScreen(
             transactions = uiState.miniStatement ?: emptyList(),
             onDismiss = {
                 showMiniStatementDialog = false
+                viewModel.clearMiniStatement()
                 viewModel.clearMessages()
             }
         )
@@ -232,7 +234,10 @@ fun AtmTerminalScreen(
     if (uiState.activeReceipt != null) {
         ReceiptSlipDialog(
             receiptText = uiState.activeReceipt,
-            onDismiss = { viewModel.clearMessages() }
+            onDismiss = {
+                viewModel.clearReceipt()
+                viewModel.clearMessages()
+            }
         )
     }
 
@@ -1518,7 +1523,23 @@ fun MiniStatementDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Mini Statement (Last 5)", fontWeight = FontWeight.Bold, color = AtmTextPrimary)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Mini Statement (Last 5)", fontWeight = FontWeight.Bold, color = AtmTextPrimary)
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = AtmTextSecondary
+                    )
+                }
+            }
         },
         text = {
             Column(
@@ -1570,8 +1591,16 @@ fun MiniStatementDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = AtmNavy700)) {
-                Text("Close", color = Color.White)
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = AtmNavy700)
+            ) {
+                Text("Close", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Dismiss", color = AtmTextSecondary)
             }
         },
         containerColor = AtmNavy800
@@ -1583,10 +1612,32 @@ fun ReceiptSlipDialog(
     receiptText: String,
     onDismiss: () -> Unit
 ) {
+    val isBalanceSlip = receiptText.contains("BALANCE INQUIRY")
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Transaction Receipt", fontWeight = FontWeight.Bold, color = AtmTextPrimary)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (isBalanceSlip) "Balance Slip" else "Transaction Receipt",
+                    fontWeight = FontWeight.Bold,
+                    color = AtmTextPrimary
+                )
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = AtmTextSecondary
+                    )
+                }
+            }
         },
         text = {
             Surface(
@@ -1605,8 +1656,16 @@ fun ReceiptSlipDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = AtmEmerald)) {
-                Text("Done", color = Color.Black, fontWeight = FontWeight.Bold)
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = AtmEmerald)
+            ) {
+                Text("Close Slip", color = Color.Black, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Dismiss", color = AtmTextSecondary)
             }
         },
         containerColor = AtmNavy800

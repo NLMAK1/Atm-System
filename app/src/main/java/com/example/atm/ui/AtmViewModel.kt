@@ -147,7 +147,23 @@ class AtmViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun clearMessages() {
-        _uiState.update { it.copy(errorMessage = null, successMessage = null, activeReceipt = null, lastDispensedNotes = null) }
+        _uiState.update {
+            it.copy(
+                errorMessage = null,
+                successMessage = null,
+                activeReceipt = null,
+                lastDispensedNotes = null,
+                miniStatement = null
+            )
+        }
+    }
+
+    fun clearReceipt() {
+        _uiState.update { it.copy(activeReceipt = null) }
+    }
+
+    fun clearMiniStatement() {
+        _uiState.update { it.copy(miniStatement = null) }
     }
 
     fun insertCard(cardNumber: String) {
@@ -259,20 +275,58 @@ class AtmViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun checkBalance() {
+    fun checkBalance(generateSlip: Boolean = true) {
         viewModelScope.launch {
             clearMessages()
             try {
                 val balance = atm.checkBalance()
                 val acc = atm.currentAccount!!
                 val msg = "Account: ${acc.accountNumber}\nType: ${acc.getAccountType()}\nAvailable Balance: Rs. ${"%,.2f".format(balance)}"
+
+                val slip = buildString {
+                    appendLine("========================================")
+                    appendLine("          APEX BANK ATM NETWORK         ")
+                    appendLine("            BALANCE INQUIRY SLIP        ")
+                    appendLine("========================================")
+                    appendLine("ATM ID     : ${atm.atmId}")
+                    appendLine("Date & Time: ${java.text.SimpleDateFormat("dd/MM/yyyy HH:mm:ss", java.util.Locale.US).format(java.util.Date())}")
+                    appendLine("Customer   : ${atm.currentCustomer?.name ?: "Valued Customer"}")
+                    appendLine("Card Number: ${atm.currentCard?.cardNumber ?: "XXXX-XXXX"}")
+                    appendLine("Account No : ${acc.accountNumber}")
+                    appendLine("Account Typ: ${acc.getAccountType()}")
+                    appendLine("----------------------------------------")
+                    appendLine("AVAILABLE BAL: Rs. ${"%,.2f".format(balance)}")
+                    if (acc.getOverdraftLimit() > 0) {
+                        appendLine("OVERDRAFT LIM: Rs. ${"%,.2f".format(acc.getOverdraftLimit())}")
+                    }
+                    if (acc.getMinimumBalance() > 0) {
+                        appendLine("MIN REQ BAL  : Rs. ${"%,.2f".format(acc.getMinimumBalance())}")
+                    }
+                    appendLine("DAILY LIMIT  : Rs. ${"%,.2f".format(acc.getDailyWithdrawalLimit())}")
+                    appendLine("TODAY DRAWN  : Rs. ${"%,.2f".format(acc.getDailyWithdrawnAmount())}")
+                    appendLine("----------------------------------------")
+                    appendLine("Status     : SUCCESS")
+                    appendLine("Thank you for banking with APEX BANK!")
+                    appendLine("========================================")
+                }
+
                 if (acc.getOverdraftLimit() > 0) {
                     val overdraftMsg = "\nOverdraft Limit: Rs. ${"%,.2f".format(acc.getOverdraftLimit())}"
                     appendLog("Balance: Rs. ${"%,.2f".format(balance)} (Overdraft: Rs. ${"%,.2f".format(acc.getOverdraftLimit())})", isSuccess = true)
-                    _uiState.update { it.copy(successMessage = msg + overdraftMsg) }
+                    _uiState.update {
+                        it.copy(
+                            successMessage = msg + overdraftMsg,
+                            activeReceipt = if (generateSlip) slip else null
+                        )
+                    }
                 } else {
                     appendLog("Balance: Rs. ${"%,.2f".format(balance)} (Min Required: Rs. ${"%,.2f".format(acc.getMinimumBalance())})", isSuccess = true)
-                    _uiState.update { it.copy(successMessage = msg) }
+                    _uiState.update {
+                        it.copy(
+                            successMessage = msg,
+                            activeReceipt = if (generateSlip) slip else null
+                        )
+                    }
                 }
                 repository.logAudit("BALANCE_CHECK", acc.accountNumber, "Balance checked: Rs. $balance", "SUCCESS")
             } catch (e: Exception) {
